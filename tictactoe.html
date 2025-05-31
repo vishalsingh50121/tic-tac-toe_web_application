@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe Game</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+
+        .game-container {
+            text-align: center;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        .game-info {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            height: 24px;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-gap: 10px;
+            margin: 20px auto;
+            max-width: 300px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: #3498db;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .cell:hover {
+            background-color: #2980b9;
+            transform: scale(1.05);
+        }
+
+        .cell.x {
+            background-color: #2ecc71;
+        }
+
+        .cell.o {
+            background-color: #e74c3c;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #resetBtn {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        #resetBtn:hover {
+            background-color: #d35400;
+        }
+
+        .mode-selector {
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            background-color: #9b59b6;
+            color: white;
+            margin: 0 5px;
+        }
+
+        .mode-btn:hover {
+            background-color: #8e44ad;
+        }
+
+        .mode-btn.active {
+            background-color: #8e44ad;
+            box-shadow: 0 0 0 2px white, 0 0 0 4px #8e44ad;
+        }
+
+        .winning-cell {
+            animation: pulse 1s infinite;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @media (max-width: 500px) {
+            .cell {
+                width: 80px;
+                height: 80px;
+                font-size: 2.5rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Tic-Tac-Toe</h1>
+        
+        <div class="mode-selector">
+            <button class="mode-btn active" id="pvpBtn">Player vs Player</button>
+            <button class="mode-btn" id="pvcBtn">Player vs Computer</button>
+        </div>
+        
+        <div class="game-info" id="gameStatus">Player X's turn</div>
+        
+        <div class="game-board" id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+        
+        <div class="controls">
+            <button id="resetBtn">Reset Game</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const board = document.getElementById('board');
+        const cells = document.querySelectorAll('.cell');
+        const gameStatus = document.getElementById('gameStatus');
+        const resetBtn = document.getElementById('resetBtn');
+        const pvpBtn = document.getElementById('pvpBtn');
+        const pvcBtn = document.getElementById('pvcBtn');
+        
+        // Game variables
+        let currentPlayer = 'X';
+        let gameState = ['', '', '', '', '', '', '', '', ''];
+        let gameActive = true;
+        let gameMode = 'pvp'; // 'pvp' or 'pvc'
+        
+        // Winning conditions
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+            [0, 4, 8], [2, 4, 6]             // diagonals
+        ];
+        
+        // Initialize the game
+        function initGame() {
+            currentPlayer = 'X';
+            gameState = ['', '', '', '', '', '', '', '', ''];
+            gameActive = true;
+            gameStatus.textContent = `Player ${currentPlayer}'s turn`;
+            
+            cells.forEach(cell => {
+                cell.textContent = '';
+                cell.classList.remove('x', 'o', 'winning-cell');
+            });
+        }
+        
+        // Handle cell click
+        function handleCellClick(e) {
+            const clickedCell = e.target;
+            const clickedCellIndex = parseInt(clickedCell.getAttribute('data-index'));
+            
+            // If cell already used or game not active, ignore
+            if (gameState[clickedCellIndex] !== '' || !gameActive) {
+                return;
+            }
+            
+            // Update game state and UI
+            gameState[clickedCellIndex] = currentPlayer;
+            clickedCell.textContent = currentPlayer;
+            clickedCell.classList.add(currentPlayer.toLowerCase());
+            
+            // Check for win or draw
+            checkResult();
+        }
+        
+        // Check if the game is won or drawn
+        function checkResult() {
+            let roundWon = false;
+            
+            // Check all winning conditions
+            for (let i = 0; i < winningConditions.length; i++) {
+                const [a, b, c] = winningConditions[i];
+                
+                if (gameState[a] === '' || gameState[b] === '' || gameState[c] === '') {
+                    continue;
+                }
+                
+                if (gameState[a] === gameState[b] && gameState[b] === gameState[c]) {
+                    roundWon = true;
+                    
+                    // Highlight winning cells
+                    cells[a].classList.add('winning-cell');
+                    cells[b].classList.add('winning-cell');
+                    cells[c].classList.add('winning-cell');
+                    break;
+                }
+            }
+            
+            // If won
+            if (roundWon) {
+                gameStatus.textContent = `Player ${currentPlayer} wins!`;
+                gameActive = false;
+                return;
+            }
+            
+            // If draw
+            if (!gameState.includes('')) {
+                gameStatus.textContent = "Game ended in a draw!";
+                gameActive = false;
+                return;
+            }
+            
+            // Continue game
+            changePlayer();
+            
+            // If playing against computer and it's computer's turn
+            if (gameMode === 'pvc' && currentPlayer === 'O' && gameActive) {
+                setTimeout(computerMove, 500);
+            }
+        }
+        
+        // Change player
+        function changePlayer() {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            gameStatus.textContent = `Player ${currentPlayer}'s turn`;
+        }
+        
+        // Computer move (simple AI)
+        function computerMove() {
+            if (!gameActive) return;
+            
+            // Try to win if possible
+            let move = findWinningMove('O');
+            
+            // Block player if they can win
+            if (move === -1) {
+                move = findWinningMove('X');
+            }
+            
+            // Choose center if available
+            if (move === -1 && gameState[4] === '') {
+                move = 4;
+            }
+            
+            // Choose random corner if available
+            if (move === -1) {
+                const corners = [0, 2, 6, 8];
+                const availableCorners = corners.filter(index => gameState[index] === '');
+                if (availableCorners.length > 0) {
+                    move = availableCorners[Math.floor(Math.random() * availableCorners.length)];
+                }
+            }
+            
+            // Choose any available move
+            if (move === -1) {
+                const availableMoves = gameState.map((val, idx) => val === '' ? idx : -1).filter(val => val !== -1);
+                if (availableMoves.length > 0) {
+                    move = availableMoves[Math.floor(Math.random() * availableMoves.length)];
+                }
+            }
+            
+            // Make the move
+            if (move !== -1) {
+                gameState[move] = 'O';
+                cells[move].textContent = 'O';
+                cells[move].classList.add('o');
+                checkResult();
+            }
+        }
+        
+        // Find a winning move for the given player
+        function findWinningMove(player) {
+            for (let i = 0; i < winningConditions.length; i++) {
+                const [a, b, c] = winningConditions[i];
+                
+                // Check if two in a row and third is empty
+                if (gameState[a] === player && gameState[b] === player && gameState[c] === '') {
+                    return c;
+                }
+                if (gameState[a] === player && gameState[c] === player && gameState[b] === '') {
+                    return b;
+                }
+                if (gameState[b] === player && gameState[c] === player && gameState[a] === '') {
+                    return a;
+                }
+            }
+            return -1;
+        }
+        
+        // Change game mode
+        function changeMode(mode) {
+            gameMode = mode;
+            pvpBtn.classList.toggle('active', mode === 'pvp');
+            pvcBtn.classList.toggle('active', mode === 'pvc');
+            initGame();
+        }
+        
+        // Event listeners
+        cells.forEach(cell => {
+            cell.addEventListener('click', handleCellClick);
+        });
+        
+        resetBtn.addEventListener('click', initGame);
+        
+        pvpBtn.addEventListener('click', () => changeMode('pvp'));
+        pvcBtn.addEventListener('click', () => changeMode('pvc'));
+        
+        // Initialize the game
+        initGame();
+    </script>
+</body>
+</html>
